@@ -1,0 +1,141 @@
+const asyncHandler = require('express-async-handler');
+const Task = require('../models/Task');
+const Worker = require('../models/Worker');
+const Topic = require('../models/Topic');
+
+// @desc    Create new task
+// @route   POST /api/tasks
+// @access  Private
+const createTask = asyncHandler(async (req, res) => {
+  const { data, topics } = req.body;
+  const workerId = req.user._id;
+
+  // Validate task data
+  if (!data || Object.keys(data).length === 0) {
+    res.status(400);
+    throw new Error('Please provide task data');
+  }
+
+  // Calculate task points
+  let taskPoints = 0;
+  
+  // Sum values from the data object
+  Object.values(data).forEach(value => {
+    taskPoints += parseInt(value) || 0;
+  });
+
+  // Add points from topics
+  let topicIds = [];
+  let topicPoints = 0;
+  
+  if (topics && topics.length > 0) {
+    const topicObjects = await Topic.find({ _id: { $in: topics } });
+    topicIds = topicObjects.map(topic => topic._id);
+    
+    topicPoints = topicObjects.reduce((sum, topic) => sum + topic.points, 0);
+    taskPoints += topicPoints;
+  }
+
+  // Create task
+  const task = await Task.create({
+    worker: workerId,
+    data,
+    topics: topicIds,
+    points: taskPoints
+  });
+
+  // Update worker total points and last submission
+  const worker = await Worker.findById(workerId);
+  worker.totalPoints = (worker.totalPoints || 0) + taskPoints;
+  worker.topicPoints = (worker.topicPoints || 0) + topicPoints;
+  worker.lastSubmission = {
+    timestamp: Date.now(),
+    details: data
+  };
+  await worker.save();
+
+  res.status(201).json(task);
+});
+
+// @desc    Get all tasks
+// @route   GET /api/tasks
+// @access  Private/Admin
+const getTasks = asyncHandler(async (req, res) => {
+  const tasks = await Task.find()
+    .populate({
+      path: 'worker',
+      populate: {
+        path: 'department',
+        select: 'name'
+      },
+      select: 'name department'
+    })
+    .populate('topics', 'name points')
+    .sort({ createdAt: -1 });
+
+  res.json(tasks);
+});
+// @desc    Get my tasks
+// @route   GET /api/tasks/me
+// @access  Private
+const getMyTasks = asyncHandler(async (req, res) => {
+  const tasks = await Task.find({ worker: req.user._id })
+    .populate('topics', 'name points')
+    .sort({ createdAt: -1 });
+  
+  res.json(tasks);
+});
+
+// @desc    Get tasks by date range
+// @route   GET /api/tasks/range
+// @access  Private/Admin
+const getTasksByDateRange = asyncHandler(async (req, res) => {
+  const { startDate, endDate } = req.query;
+  
+  if (!startDate || !endDate) {
+    res.status(400);
+    throw new Error('Please provide start and end dates');
+  }
+
+  const tasks = await Task.find({
+    createdAt: {
+      $gte: new Date(startDate),
+      $lte: new Date(endDate)
+    }
+  })
+    .populate('worker', 'name department')
+    .populate('topics', 'name points')
+    .sort({ createdAt: -1 });
+  
+  res.json(tasks);
+});
+
+// @desc    Reset all tasks
+// @route   DELETE /api/tasks/reset
+// @access  Private/Admin
+const resetAllTasks = asyncHandler(async (req, res) => {
+  // Delete all tasks
+  await Task.deleteMany({});
+  
+  // Reset all worker points
+  await Worker.updateMany(
+    {},
+    { 
+      $set: { 
+        totalPoints: 0,
+        topicPoints: 0,
+        lastSubmission: {}
+      }
+    }
+  );
+
+  res.json({ message: 'All tasks reset successfully' });
+});
+
+module.exports = {
+  createTask,
+  getTasks,
+  getMyTasks,
+  getTasksByDateRange,
+  resetAllTasks
+};
