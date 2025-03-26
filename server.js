@@ -24,7 +24,7 @@ const app = express();
 
 // Configure CORS to allow requests from your client with credentials
 app.use(cors({
-  origin: 'http://localhost:3000', 
+  origin: ['http://localhost:3000', 'https://client-seven-ruby.vercel.app','https://client-santhoshsekar999-gmailcoms-projects.vercel.app/'],
   credentials: true,
 }));
 
@@ -53,6 +53,7 @@ app.get('/', (req, res) => {
 });
 
 // Error handler
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
