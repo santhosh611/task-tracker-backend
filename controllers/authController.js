@@ -73,7 +73,8 @@ const loginAdmin = asyncHandler(async (req, res) => {
       username: admin.username,
       email: admin.email,
       role: 'admin',
-      token: generateToken(admin._id, 'admin'),
+      organizationId: admin.organizationId,
+      token: generateToken(admin._id, 'admin')
     });
   } else {
     res.status(401);

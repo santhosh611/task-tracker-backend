@@ -132,10 +132,135 @@ const resetAllTasks = asyncHandler(async (req, res) => {
   res.json({ message: 'All tasks reset successfully' });
 });
 
+const createCustomTask = asyncHandler(async (req, res) => {
+  const { description } = req.body;
+  const workerId = req.user._id;
+
+  console.log('Creating custom task with workerId:', workerId);
+
+  // Check if worker exists
+  const workerExists = await Worker.findById(workerId);
+  if (!workerExists) {
+    console.log('Worker not found:', workerId);
+    res.status(400);
+    throw new Error('Worker not found');
+  }
+
+  const task = await Task.create({
+    worker: workerId,
+    description,
+    isCustom: true,
+    status: 'pending',
+    points: 0
+  });
+
+  // Populate the worker information before returning
+  const populatedTask = await Task.findById(task._id).populate({
+    path: 'worker',
+    select: 'name department',
+    populate: {
+      path: 'department',
+      select: 'name'
+    }
+  });
+
+  res.status(201).json(populatedTask);
+});
+
+
+const getCustomTasks = asyncHandler(async (req, res) => {
+  const tasks = await Task.find({ isCustom: true })
+    .populate({
+      path: 'worker',
+      select: 'name department',
+      populate: {
+        path: 'department',
+        select: 'name'
+      }
+    })
+    .sort({ createdAt: -1 });
+  
+  // For debugging
+  console.log('Populated tasks:', JSON.stringify(tasks.map(t => ({
+    id: t._id,
+    worker: t.worker ? { id: t.worker._id, name: t.worker.name } : null,
+    description: t.description
+  })), null, 2));
+  
+  res.json(tasks);
+});
+
+const getMyCustomTasks = asyncHandler(async (req, res) => {
+  const tasks = await Task.find({ 
+    worker: req.user._id,
+    isCustom: true 
+  }).sort({ createdAt: -1 });
+  
+  res.json(tasks);
+});
+
+const reviewCustomTask = asyncHandler(async (req, res) => {
+  const { status, points } = req.body;
+  const taskId = req.params.id;
+
+  // Validate input
+  if (!status || !['approved', 'rejected'].includes(status)) {
+    res.status(400);
+    throw new Error('Please provide a valid status (approved or rejected)');
+  }
+
+  if (status === 'approved' && (!points || points < 0)) {
+    res.status(400);
+    throw new Error('Please provide valid points for approved task');
+  }
+
+  // Find task
+  const task = await Task.findById(taskId);
+  if (!task) {
+    res.status(404);
+    throw new Error('Task not found');
+  }
+
+  if (!task.isCustom) {
+    res.status(400);
+    throw new Error('This is not a custom task');
+  }
+
+  // Update task
+  task.status = status;
+  
+  if (status === 'approved') {
+    task.points = points;
+    
+    // Update worker's total points
+    const worker = await Worker.findById(task.worker);
+    worker.totalPoints = (worker.totalPoints || 0) + points;
+    await worker.save();
+  }
+
+  await task.save();
+
+  // Populate worker information before sending response
+  const populatedTask = await Task.findById(task._id).populate({
+    path: 'worker',
+    select: 'name department',
+    populate: {
+      path: 'department',
+      select: 'name'
+    }
+  });
+
+  res.json(populatedTask);
+});
+
 module.exports = {
   createTask,
   getTasks,
   getMyTasks,
   getTasksByDateRange,
-  resetAllTasks
+  resetAllTasks,
+  createCustomTask,
+  getCustomTasks,
+  getMyCustomTasks,
+  reviewCustomTask
 };

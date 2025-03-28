@@ -6,7 +6,7 @@ const departmentSchema = new mongoose.Schema({
     required: [true, 'Department name is required'],
     unique: true,
     trim: true,
-    lowercase: true
+    
   },
   createdAt: {
     type: Date,
@@ -16,11 +16,17 @@ const departmentSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Validation to ensure unique department names
 departmentSchema.pre('save', async function(next) {
+  console.log('Pre-save Hook - Original Name:', this.name);
+  
   if (this.isModified('name')) {
+    // Remove any automatic transformations
+    this.name = this.name.trim();
+    
+    console.log('Pre-save Hook - Processed Name:', this.name);
+
     const existingDepartment = await this.constructor.findOne({ 
-      name: this.name.toLowerCase().trim() 
+      name: this.name
     });
 
     if (existingDepartment && existingDepartment._id.toString() !== this._id.toString()) {

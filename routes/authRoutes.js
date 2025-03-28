@@ -6,7 +6,8 @@ const {
   loginAdmin, 
   loginWorker,
   getMe,
-  checkAdminInitialization 
+  checkAdminInitialization ,
+  
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
 

@@ -5,7 +5,12 @@ const {
   getTasks, 
   getMyTasks, 
   getTasksByDateRange, 
-  resetAllTasks 
+  resetAllTasks,
+  createCustomTask,
+  getCustomTasks,
+  getMyCustomTasks,
+  reviewCustomTask 
+
 } = require('../controllers/taskController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
@@ -16,5 +21,11 @@ router.route('/')
 router.get('/me', protect, getMyTasks);
 router.get('/range', protect, adminOnly, getTasksByDateRange);
 router.delete('/reset', protect, adminOnly, resetAllTasks);
+
+// Custom task routes
+router.post('/custom', protect, createCustomTask);
+router.get('/custom', protect, adminOnly, getCustomTasks);
+router.get('/custom/me', protect, getMyCustomTasks);
+router.put('/custom/:id', protect, adminOnly, reviewCustomTask);
 
 module.exports = router;

@@ -5,6 +5,8 @@ const asyncHandler = require('express-async-handler');
 const createDepartment = asyncHandler(async (req, res) => {
   const { name } = req.body;
 
+  console.log('Received Department Name:', name);
+
   // Validate input
   if (!name || name.trim().length < 2) {
     res.status(400);
@@ -12,22 +14,14 @@ const createDepartment = asyncHandler(async (req, res) => {
   }
 
   try {
-    // Check for existing department
-    const existingDepartment = await Department.findOne({ 
-      name: name.trim().toLowerCase() 
-    });
-
-    if (existingDepartment) {
-      res.status(400);
-      throw new Error('A department with this name already exists');
-    }
-
-    // Create department
-    const department = await Department.create({
-      name: name.trim().toLowerCase()
-     
-      
-    });
+    // Create department with exact case preservation
+    const department = new Department({ name: name });
+    
+    console.log('Department Before Save:', department);
+    
+    await department.save();
+    
+    console.log('Department After Save:', department);
 
     // Get worker count
     const workerCount = await Worker.countDocuments({ 
@@ -40,50 +34,37 @@ const createDepartment = asyncHandler(async (req, res) => {
       workerCount
     };
 
+    console.log('Department Response:', departmentResponse);
+
     res.status(201).json(departmentResponse);
   } catch (error) {
-    // Handle specific errors
-    if (error.code === 11000) {
-      res.status(400);
-      throw new Error('A department with this name already exists');
-   
-      
-    }
-    
-    // Rethrow other errors
+    console.error('Department Creation Error:', error);
     throw error;
   }
 });
 
 const getDepartments = asyncHandler(async (req, res) => {
   try {
-    const departments = await Department.aggregate([
-      {
-        $lookup: {
-          from: 'workers',
-          localField: '_id',
-          foreignField: 'department',
-          as: 'workers'
-        }
-      },
-      {
-        $addFields: {
-          workerCount: { $size: '$workers' }
-        }
-      },
-      {
-        $project: {
-          name: 1,
-          createdAt: 1,
-          workerCount: 1
-        }
-      },
-      {
-        $sort: { createdAt: -1 }
-      }
-    ]);
+    // Find departments and sort by creation date (most recent first)
+    const departments = await Department.find().sort({ createdAt: -1 });
 
-    res.json(departments);
+    // Calculate worker count for each department
+    const departmentsWithWorkerCount = await Promise.all(
+      departments.map(async (department) => {
+        const workerCount = await Worker.countDocuments({ 
+          department: department._id 
+        });
+
+        return {
+          _id: department._id,
+          name: department.name, // This will preserve the original case
+          createdAt: department.createdAt,
+          workerCount
+        };
+      })
+    );
+
+    res.json(departmentsWithWorkerCount);
   } catch (error) {
     res.status(500);
     throw new Error('Failed to fetch departments');
@@ -115,8 +96,66 @@ const deleteDepartment = asyncHandler(async (req, res) => {
   });
 });
 
+const updateDepartment = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+
+  // Validate input
+  if (!name || name.trim().length < 2) {
+    res.status(400);
+    throw new Error('Department name must be at least 2 characters long');
+  }
+
+  try {
+    // Check for existing department (case-insensitive)
+    const existingDepartment = await Department.findOne({ 
+      name: { $regex: `^${name.trim()}$`, $options: 'i' },
+      _id: { $ne: id } // Exclude current department
+    });
+
+    if (existingDepartment) {
+      res.status(400);
+      throw new Error('A department with this name already exists');
+    }
+
+    // Find the department and update with exact case
+    const department = await Department.findById(id);
+    
+    if (!department) {
+      res.status(404);
+      throw new Error('Department not found');
+    }
+
+    department.name = name.trim();
+    await department.save(); // Use save() to trigger validation
+
+    // Get worker count
+    const workerCount = await Worker.countDocuments({ 
+      department: department._id 
+    });
+
+    // Prepare response
+    const departmentResponse = {
+      ...department.toObject(),
+      workerCount
+    };
+
+    res.json(departmentResponse);
+  } catch (error) {
+    // Handle specific errors
+    if (error.code === 11000) {
+      res.status(400);
+      throw new Error('A department with this name already exists');
+    }
+    
+    // Rethrow other errors
+    throw error;
+  }
+});
+
 module.exports = {
   createDepartment,
   getDepartments,
-  deleteDepartment
+  deleteDepartment,
+  updateDepartment
 };

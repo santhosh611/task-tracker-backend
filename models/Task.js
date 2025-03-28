@@ -8,7 +8,7 @@ const taskSchema = mongoose.Schema({
   },
   data: {
     type: Object,
-    required: true
+    default: {}
   },
   topics: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -16,7 +16,20 @@ const taskSchema = mongoose.Schema({
   }],
   points: {
     type: Number,
-    required: true
+    default: 0
+  },
+  // New fields for custom tasks
+  isCustom: {
+    type: Boolean,
+    default: false
+  },
+  description: {
+    type: String
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
   }
 }, {
   timestamps: true
