@@ -37,51 +37,77 @@ const getMyComments = asyncHandler(async (req, res) => {
 // @route   GET /api/comments
 // @access  Private/Admin
 const getAllComments = asyncHandler(async (req, res) => {
-  const comments = await Comment.find()
-    .populate({
-      path: 'worker',
-      populate: {
-        path: 'department',
-        select: 'name' 
-      },
-      select: 'name department photo username' // Add more fields
-    })
-    .sort({ createdAt: -1 });
-
-  // More detailed transformation
-  const transformedComments = comments.map(comment => {
-    const commentObj = comment.toObject();
+  try {
+    console.log('Admin requesting all comments');
     
-    // Provide fallback values
-    commentObj.worker = commentObj.worker || { 
-      name: 'Unknown Worker', 
-      department: { name: 'Unassigned' } 
-    };
-
-    return commentObj;
-  });
-
-  res.json(transformedComments);
+    // First get all comments
+    const allComments = await Comment.find()
+      .populate({
+        path: 'worker',
+        populate: {
+          path: 'department',
+          select: 'name' 
+        },
+        select: 'name department photo username'
+      })
+      .sort({ createdAt: -1 });
+    
+    console.log(`Found ${allComments.length} total comments`);
+    
+    // Process and send back all comments, with placeholders for missing worker info
+    const processedComments = allComments.map(comment => {
+      // Convert to plain object
+      const commentObj = comment.toObject();
+      
+      // Add placeholder worker info if missing
+      if (!commentObj.worker) {
+        commentObj.worker = {
+          name: 'Unknown Worker',
+          department: { name: 'Unassigned' },
+          _id: comment.worker || 'unknown'
+        };
+      }
+      
+      return commentObj;
+    });
+    
+    res.json(processedComments);
+  } catch (error) {
+    console.error('Error in getAllComments:', error);
+    res.status(500).json({ message: 'Failed to fetch comments', error: error.message });
+  }
 });
 
+// @desc    Create new comment
+// @route   POST /api/comments
+// @access  Private
 const createComment = asyncHandler(async (req, res) => {
-  const { text } = req.body;
-  const workerId = req.user._id;
-
-  // Validate input
-  if (!text) {
-    res.status(400);
-    throw new Error('Comment text is required');
-  }
-
   try {
+    const { text } = req.body;
+    const workerId = req.user._id;
+
+    // Validate input
+    if (!text) {
+      return res.status(400).json({ message: 'Comment text is required' });
+    }
+
+    // Log information for debugging
+    console.log('Creating comment with data:', { text, workerId });
+    
+    // Verify the worker exists
+    const worker = await Worker.findById(workerId);
+    if (!worker) {
+      console.log('Worker not found with ID:', workerId);
+      return res.status(404).json({ message: 'Worker not found' });
+    }
+
     const comment = await Comment.create({
       worker: workerId,
       text
     });
 
     // Populate worker details
-    await comment.populate({
+    const populatedComment = await Comment.findById(comment._id).populate({
       path: 'worker',
       populate: {
         path: 'department',
@@ -90,27 +116,37 @@ const createComment = asyncHandler(async (req, res) => {
       select: 'name department photo'
     });
 
-    console.log('Comment Created Successfully:', comment);
+    console.log('Comment Created Successfully:', populatedComment);
 
-    res.status(201).json(comment);
+    res.status(201).json(populatedComment);
   } catch (error) {
     console.error('Comment Creation Error:', error);
-    res.status(500);
-    throw new Error('Failed to create comment');
+    res.status(500).json({ message: 'Failed to create comment', error: error.message });
   }
 });
-  // @desc    Add reply to comment
-  // @route   POST /api/comments/:id/replies
-  // @access  Private
-  const addReply = asyncHandler(async (req, res) => {
-    const { text } = req.body;
-    
-    if (!text) {
-      res.status(400);
-      throw new Error('Please add text to your reply');
-    }
-    
-    const comment = await Comment.findById(req.params.id);
+
+// @desc    Add reply to comment
+// @route   POST /api/comments/:id/replies
+// @access  Private
+const addReply = asyncHandler(async (req, res) => {
+  const { text } = req.body;
+  
+  if (!text) {
+    res.status(400);
+    throw new Error('Please add text to your reply');
+  }
+  
+  try {
+    // Find the comment with populated worker
+    const comment = await Comment.findById(req.params.id)
+      .populate({
+        path: 'worker',
+        populate: {
+          path: 'department',
+          select: 'name'
+        },
+        select: 'name department photo username'
+      });
     
     if (!comment) {
       res.status(404);
@@ -121,7 +157,8 @@ const createComment = asyncHandler(async (req, res) => {
     const newReply = {
       text,
       isAdminReply: req.user.role === 'admin',
-      isNew: true
+      isNew: true,
+      createdAt: new Date() // Explicitly set creation time
     };
     
     // Add reply to comment
@@ -138,64 +175,119 @@ const createComment = asyncHandler(async (req, res) => {
     
     await comment.save();
     
+    // Return the already populated comment to avoid extra DB query
     res.status(201).json(comment);
+  } catch (error) {
+    console.error('Error adding reply:', error);
+    res.status(500).json({ message: 'Failed to add reply', error: error.message });
+  }
+});
+
+// @desc    Mark comment as read
+// @route   PUT /api/comments/:id/read
+// @access  Private
+const markCommentAsRead = asyncHandler(async (req, res) => {
+  const comment = await Comment.findById(req.params.id);
+  
+  if (!comment) {
+    res.status(404);
+    throw new Error('Comment not found');
+  }
+  
+  comment.isNew = false;
+  
+  if (comment.replies && comment.replies.length > 0) {
+    comment.replies.forEach(reply => {
+      reply.isNew = false;
+    });
+  }
+  
+  await comment.save();
+  
+  res.json({ message: 'Comment marked as read' });
+});
+
+// @desc    Get unread admin replies (for worker)
+// @route   GET /api/comments/unread-admin-replies
+// @access  Private
+const getUnreadAdminReplies = asyncHandler(async (req, res) => {
+  const comments = await Comment.find({ 
+    worker: req.user._id, 
+    hasUnreadAdminReply: true 
   });
   
-  
-  // @desc    Mark comment as read
-  // @route   PUT /api/comments/:id/read
-  // @access  Private
-  const markCommentAsRead = asyncHandler(async (req, res) => {
-    const comment = await Comment.findById(req.params.id);
-    
-    if (!comment) {
-      res.status(404);
-      throw new Error('Comment not found');
-    }
-    
-    comment.isNew = false;
-    
-    if (comment.replies && comment.replies.length > 0) {
-      comment.replies.forEach(reply => {
-        reply.isNew = false;
-      });
-    }
-    
-    await comment.save();
-    
-    res.json({ message: 'Comment marked as read' });
-  });
-  
-  const getUnreadAdminReplies = asyncHandler(async (req, res) => {
-    const comments = await Comment.find({ 
+  res.json(comments);
+});
+
+// @desc    Mark admin replies as read
+// @route   PUT /api/comments/mark-admin-replies-read
+// @access  Private
+const markAdminRepliesAsRead = asyncHandler(async (req, res) => {
+  await Comment.updateMany(
+    { 
       worker: req.user._id, 
       hasUnreadAdminReply: true 
-    });
-    
-    res.json(comments);
-  });
+    },
+    { 
+      hasUnreadAdminReply: false 
+    }
+  );
+  
+  res.json({ message: 'Admin replies marked as read' });
+});
 
-  const markAdminRepliesAsRead = asyncHandler(async (req, res) => {
-    await Comment.updateMany(
-      { 
-        worker: req.user._id, 
-        hasUnreadAdminReply: true 
-      },
-      { 
-        hasUnreadAdminReply: false 
+// @desc    Clean up invalid worker references in comments
+// @route   POST /api/comments/cleanup
+// @access  Private/Admin
+const cleanupComments = asyncHandler(async (req, res) => {
+  try {
+    // Find all comments
+    const comments = await Comment.find();
+    
+    let updatedCount = 0;
+    let deletedCount = 0;
+    
+    for (const comment of comments) {
+      // Check if the worker exists
+      const workerExists = await Worker.findById(comment.worker);
+      
+      if (!workerExists) {
+        console.log(`Comment ${comment._id} has invalid worker reference: ${comment.worker}`);
+        
+        // Find any valid worker to use instead
+        const anyWorker = await Worker.findOne();
+        
+        if (anyWorker) {
+          comment.worker = anyWorker._id;
+          await comment.save();
+          updatedCount++;
+          console.log(`Reassigned to worker: ${anyWorker._id}`);
+        } else {
+          // If no workers at all, delete the comment as it can't be reassigned
+          await Comment.deleteOne({ _id: comment._id });
+          deletedCount++;
+          console.log(`Deleted comment: ${comment._id}`);
+        }
       }
-    );
+    }
     
-    res.json({ message: 'Admin replies marked as read' });
-  });
+    res.json({ 
+      message: `Cleanup complete. Updated ${updatedCount} comments, deleted ${deletedCount} comments.` 
+    });
+  } catch (error) {
+    console.error('Error during cleanup:', error);
+    res.status(500).json({ message: 'Cleanup failed', error: error.message });
+  }
+});
 
-  module.exports = {
-    getWorkerComments,
-    getMyComments,
-    getAllComments,
-    createComment,
-    addReply,
-    markAdminRepliesAsRead,
-    getUnreadAdminReplies,
-    markCommentAsRead
-  };
+module.exports = {
+  getWorkerComments,
+  getMyComments,
+  getAllComments,
+  createComment,
+  addReply,
+  markAdminRepliesAsRead,
+  getUnreadAdminReplies,
+  markCommentAsRead,
+  cleanupComments
+};

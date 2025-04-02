@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const asyncHandler = require('express-async-handler');
 const { 
   getWorkerComments, 
   getMyComments, 
@@ -8,9 +9,12 @@ const {
   addReply, 
   markAdminRepliesAsRead,
   getUnreadAdminReplies,
-  markCommentAsRead 
+  markCommentAsRead,
+  cleanupComments 
 } = require('../controllers/commentController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
+const Comment = require('../models/Comment');
+const Worker = require('../models/Worker');
 
 router.route('/')
   .get(protect, adminOnly, getAllComments)
@@ -22,4 +26,29 @@ router.post('/:id/replies', protect, addReply);
 router.put('/:id/read', protect, markCommentAsRead);
 router.get('/unread-admin-replies', protect, getUnreadAdminReplies);
 router.put('/mark-admin-replies-read', protect, markAdminRepliesAsRead);
+
+// Add cleanup route
+router.post('/cleanup', protect, adminOnly, asyncHandler(async (req, res) => {
+  // Fix any comments with missing worker references
+  const comments = await Comment.find();
+  let fixedCount = 0;
+  
+  for (const comment of comments) {
+    const worker = await Worker.findById(comment.worker);
+    if (!worker) {
+      console.log(`Comment ${comment._id} has invalid worker reference`);
+      
+      // Find a valid worker to reassign
+      const anyWorker = await Worker.findOne();
+      if (anyWorker) {
+        comment.worker = anyWorker._id;
+        await comment.save();
+        fixedCount++;
+      }
+    }
+  }
+  
+  res.json({ message: `Fixed ${fixedCount} comments` });
+}));
+
 module.exports = router;
