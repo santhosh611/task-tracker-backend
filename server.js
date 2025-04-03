@@ -24,8 +24,20 @@ const app = express();
 
 // Configure CORS to allow requests from your client with credentials
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://client-seven-ruby.vercel.app','https://client-santhoshsekar999-gmailcoms-projects.vercel.app/'],
-  
+  origin: (origin, callback) => {
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'https://client-seven-ruby.vercel.app',
+      'https://client-santhoshsekar999-gmailcoms-projects.vercel.app'
+    ];
+    const regex = /^http:\/\/.*\.localhost:3000$/; // Allow subdomains of localhost:3000
+
+    if (!origin || allowedOrigins.includes(origin) || regex.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true

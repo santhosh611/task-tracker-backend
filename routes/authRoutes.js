@@ -6,10 +6,14 @@ const {
   loginAdmin, 
   loginWorker,
   getMe,
-  checkAdminInitialization ,
+  checkAdminInitialization, 
+  subdomainAvailable,
   
 } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
+
+// Subdomain avalability
+router.post('/admin/subdomain-available', subdomainAvailable);
 
 // Admin registration and login
 router.post('/admin/register', registerAdmin);

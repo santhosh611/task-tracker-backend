@@ -9,6 +9,11 @@ const adminSchema = mongoose.Schema(
       required: [true, 'Please add a username'],
       unique: true,
     },
+    subdomain: {
+      type: String,
+      required: [true, 'Please add a subdomain'],
+      unique: true
+    },
     email: {
       type: String,
       required: [true, 'Please add an email'],

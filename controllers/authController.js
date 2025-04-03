@@ -12,14 +12,43 @@ const generateToken = (id, role) => {
   });
 };
 
+// @desc    Check subdomain availability
+// @route   POST /api/auth/admin/subdomain-available
+// @access  Public
+const subdomainAvailable = asyncHandler(async (req, res) => {
+  const { subdomain } = req.body;
+
+  // Validate input
+  if (!subdomain) {
+    res.status(400).json({ available: false, message: 'Subdomain must be minium 5 characters' });
+    throw new Error('Subdomain is required');
+  }
+
+  // Check subdomain length and allowed characters
+  const isValidSubdomain = /^[a-zA-Z0-9-]{5,}$/.test(subdomain) && !subdomain.startsWith('-') && !subdomain.endsWith('-');
+  if (!isValidSubdomain) {
+    res.status(400);
+    throw new Error('Subdomain must be at least 5 characters long and can only contain letters, numbers, and hyphens (-), but cannot start or end with a hyphen');
+  }
+
+  // Check if subdomain exists
+  const subdomainExists = await Admin.findOne({ subdomain });
+
+  if (subdomainExists) {
+    res.json({ available: false, message: 'Subdomain is already taken' });
+  } else {
+    res.json({ available: true, message: 'Subdomain is available' });
+  }
+});
+
 // @desc    Register a new admin
 // @route   POST /api/auth/admin/register
 // @access  Public
 const registerAdmin = asyncHandler(async (req, res) => {
-  const { username, email, password } = req.body;
+  const { username, subdomain, email, password } = req.body;
 
   // Validate input
-  if (!username || !email || !password) {
+  if (!username || !subdomain || !email || !password) {
     res.status(400);
     throw new Error('Please provide all required fields');
   }
@@ -31,7 +60,15 @@ const registerAdmin = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error('Admin already exists');
   }
+  
+  // check if subdomain exixts
+  const subdomainExists = await Admin.findOne({ subdomain });
 
+  if (subdomainExists) {
+    res.status(400);
+    throw new Error('Subdomain already exists');
+  }
+  
   // Hash password
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
@@ -39,6 +76,7 @@ const registerAdmin = asyncHandler(async (req, res) => {
   // Create admin
   const admin = await Admin.create({
     username,
+    subdomain,
     email,
     password: hashedPassword,
     role: 'admin'
@@ -48,6 +86,7 @@ const registerAdmin = asyncHandler(async (req, res) => {
     res.status(201).json({
       _id: admin._id,
       username: admin.username,
+      subdomain: admin.subdomain,
       email: admin.email,
       role: admin.role,
       token: generateToken(admin._id, 'admin')
@@ -132,10 +171,8 @@ const loginWorker = asyncHandler(async (req, res) => {
   }
 });
 
-
-
-
 module.exports = {
+  subdomainAvailable,
   registerAdmin,
   loginAdmin,
   loginWorker,
