@@ -10,7 +10,9 @@ const {
   markAdminRepliesAsRead,
   getUnreadAdminReplies,
   markCommentAsRead,
-  cleanupComments 
+  getNewCommentCount,
+  cleanupComments,
+
 } = require('../controllers/commentController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 const Comment = require('../models/Comment');
@@ -26,7 +28,7 @@ router.post('/:id/replies', protect, addReply);
 router.put('/:id/read', protect, markCommentAsRead);
 router.get('/unread-admin-replies', protect, getUnreadAdminReplies);
 router.put('/mark-admin-replies-read', protect, markAdminRepliesAsRead);
-
+router.get('/new-count', protect, adminOnly, getNewCommentCount);
 // Add cleanup route
 router.post('/cleanup', protect, adminOnly, asyncHandler(async (req, res) => {
   // Fix any comments with missing worker references

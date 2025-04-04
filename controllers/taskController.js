@@ -68,7 +68,7 @@ const getTasks = asyncHandler(async (req, res) => {
         path: 'department',
         select: 'name'
       },
-      select: 'name department'
+      select: 'name department photo'  // <-- Added 'photo'
     })
     .populate('topics', 'name points')
     .sort({ createdAt: -1 });

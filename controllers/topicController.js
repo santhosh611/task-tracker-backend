@@ -15,18 +15,29 @@ const getTopics = asyncHandler(async (req, res) => {
 const createTopic = asyncHandler(async (req, res) => {
   const { name, points, department } = req.body;
 
-  // Check if topic exists
-  const topicExists = await Topic.findOne({ name });
+  // Trim and validate name
+  const trimmedName = name.trim();
+
+  // Check for empty name
+  if (!trimmedName) {
+    res.status(400);
+    throw new Error('Topic name cannot be empty');
+  }
+
+  // Case-insensitive check for existing topic
+  const topicExists = await Topic.findOne({ 
+    name: { $regex: new RegExp(`^${trimmedName}$`, 'i') } 
+  });
 
   if (topicExists) {
     res.status(400);
-    throw new Error('Topic already exists');
+    throw new Error('A topic with this name already exists');
   }
 
-  // Create topic
+  // Create topic with validated data
   const topic = await Topic.create({
-    name,
-    points,
+    name: trimmedName,
+    points: points || 0,
     department: department || 'all'
   });
 

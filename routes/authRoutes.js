@@ -16,8 +16,7 @@ const { protect } = require('../middleware/authMiddleware');
 router.post('/admin/register', registerAdmin);
 router.post('/admin', loginAdmin);
 router.post('/worker', loginWorker);
-router.post('/refresh', protect, refreshToken);
-
+router.post('/refresh-token', refreshToken);
 // Check admin initialization
 router.get('/check-admin', checkAdminInitialization);
 

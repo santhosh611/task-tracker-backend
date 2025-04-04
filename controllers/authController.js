@@ -133,60 +133,53 @@ const loginWorker = asyncHandler(async (req, res) => {
 });
 
 const refreshToken = asyncHandler(async (req, res) => {
-  // Get the current token from the request
-  const { token } = req.body;
-
-  if (!token) {
-    res.status(401);
-    throw new Error('No token provided');
-  }
-
   try {
-    // Verify the token (ignore expiration)
-    const decoded = jwt.verify(token, process.env.JWT_SECRET, { 
-      ignoreExpiration: true 
-    });
-
-    // Determine if it's an admin or worker
+    // Extract token from authorization header
+    const token = req.headers.authorization.split(' ')[1];
+    
+    // Verify token (ignoring expiration)
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { ignoreExpiration: true });
+    
+    // We need to determine if this is an admin or worker
     let user;
-    if (decoded.role === 'admin') {
-      user = await Admin.findById(decoded.id);
-    } else if (decoded.role === 'worker') {
-      user = await Worker.findOne({ _id: decoded.id }).populate('department', 'name');
+    let userRole = decoded.role; // Get role from token
+    
+    // If we can't get role from token, check request body
+    if (!userRole && req.body && req.body.role) {
+      userRole = req.body.role;
     }
-
-    if (!user) {
-      res.status(401);
-      throw new Error('User not found');
+    
+    // Find user based on role information
+    if (userRole === 'admin') {
+      user = await Admin.findById(decoded.id).select('-password');
+      if (!user) {
+        return res.status(401).json({ message: 'Admin not found' });
+      }
+    } else {
+      user = await Worker.findById(decoded.id).select('-password');
+      if (!user) {
+        return res.status(401).json({ message: 'Worker not found' });
+      }
     }
-
-    // Generate a new token
-    const newToken = generateToken(user._id, user.role);
-
-    // Return user info and new token
-    if (user.role === 'admin') {
-      res.json({
+    
+    // Generate new token with explicit role
+    const newToken = generateToken(user._id, userRole);
+    
+    // Return new token and user data
+    res.json({
+      token: newToken,
+      user: {
         _id: user._id,
+        name: user.name || user.username,
         username: user.username,
         email: user.email,
-        role: 'admin',
-        organizationId: user.organizationId,
-        token: newToken
-      });
-    } else {
-      res.json({
-        _id: user._id,
-        username: user.username,
-        name: user.name,
-        department: user.department ? user.department.name : 'Unassigned',
-        role: 'worker',
-        token: newToken
-      });
-    }
+        role: userRole,
+        ...(userRole === 'worker' && user.department && { department: user.department.name })
+      }
+    });
   } catch (error) {
     console.error('Token refresh error:', error);
-    res.status(401);
-    throw new Error('Invalid token');
+    res.status(401).json({ message: 'Token refresh failed' });
   }
 });
 

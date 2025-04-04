@@ -11,8 +11,12 @@ const protect = asyncHandler(async (req, res, next) => {
   }
 
   try {
-    token = req.headers.authorization.split(' ')[1]; 
+    token = req.headers.authorization.split(' ')[1];
+    
+    // Decode token to check its contents
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Token decoded:', decoded); // Check if role is included
+    
     let user = await Admin.findById(decoded.id).select('-password');
     
     if (!user) {
@@ -23,8 +27,11 @@ const protect = asyncHandler(async (req, res, next) => {
       return res.status(401).json({ message: 'User not found' });
     }
 
+    // Set user role properly
     req.user = user;
-    req.user.role = user.role || (user instanceof Admin ? 'admin' : 'worker');
+    req.user.role = decoded.role || (user instanceof Admin ? 'admin' : 'worker');
+    
+    console.log('User authenticated with role:', req.user.role);
     
     next();
   } catch (error) {
@@ -39,6 +46,8 @@ const roleCheck = (roles) => {
       return res.status(401).json({ message: 'Not authorized' });
     }
 
+    console.log('User role check:', req.user.role, 'Required roles:', roles);
+    
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({ message: 'Access denied' });
     }

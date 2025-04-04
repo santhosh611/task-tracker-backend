@@ -6,7 +6,7 @@ const Leave = require('../models/Leave');
 // @access  Private/Admin
 const getLeaves = asyncHandler(async (req, res) => {
   const leaves = await Leave.find()
-    .populate('worker', 'name department')
+    .populate('worker', 'name department photo') // Add photo field
     .sort({ createdAt: -1 });
 
   res.json(leaves);
@@ -74,18 +74,23 @@ const updateLeaveStatus = asyncHandler(async (req, res) => {
   res.json(updatedLeave);
 });
 
+// In leaveController.js
+// In leaveController.js
 const getLeavesByStatus = asyncHandler(async (req, res) => {
   const { status } = req.query;
 
   const query = status !== 'all' ? { status } : {};
 
   const leaves = await Leave.find(query)
-    .populate('worker', 'name department')
+    .populate({
+      path: 'worker',
+      select: 'name department', 
+      options: { strictPopulate: false } // Allow null values
+    })
     .sort({ createdAt: -1 });
 
   res.json(leaves);
 });
-
 // @desc    Mark leave as viewed by worker
 // @route   PUT /api/leaves/:id/viewed
 // @access  Private
@@ -137,7 +142,7 @@ const getLeavesByDateRange = asyncHandler(async (req, res) => {
       }
     ]
   })
-    .populate('worker', 'name department')
+    .populate('worker', 'name department photo') // Add photo field
     .sort({ createdAt: -1 });
   
   res.json(leaves);
@@ -156,6 +161,15 @@ const markLeavesAsViewedByAdmin = asyncHandler(async (req, res) => {
   res.json({ message: 'All leaves marked as viewed by admin' });
 });
 
+const getNewLeaveRequestsCount = asyncHandler(async (req, res) => {
+  const newLeaveRequestsCount = await Leave.countDocuments({ 
+    status: 'Pending', 
+    workerViewed: false 
+  });
+  
+  res.json({ count: newLeaveRequestsCount });
+});
+
 module.exports = {
   getLeaves,
   getMyLeaves,
@@ -164,5 +178,6 @@ module.exports = {
   getLeavesByStatus,
   markLeaveAsViewed,
   markLeavesAsViewedByAdmin,
-  getLeavesByDateRange
+  getLeavesByDateRange,
+  getNewLeaveRequestsCount
 };

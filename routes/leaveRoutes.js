@@ -8,7 +8,8 @@ const {
   updateLeaveStatus, 
   markLeaveAsViewed,
   markLeavesAsViewedByAdmin, 
-  getLeavesByDateRange 
+  getLeavesByDateRange,
+  getNewLeaveRequestsCount
 } = require('../controllers/leaveController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
@@ -25,4 +26,5 @@ router.get('/status', protect, adminOnly, getLeavesByStatus);
 router.put('/:id/status', protect, adminOnly, updateLeaveStatus);
 router.put('/:id/viewed', protect, markLeaveAsViewed);
 router.put('/mark-viewed-by-admin', protect, adminOnly, markLeavesAsViewedByAdmin);
+router.get('/new-requests-count', protect, adminOnly, getNewLeaveRequestsCount);
 module.exports = router;

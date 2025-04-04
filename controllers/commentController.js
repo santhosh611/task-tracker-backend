@@ -280,6 +280,25 @@ const cleanupComments = asyncHandler(async (req, res) => {
   }
 });
 
+const getNewCommentCount = asyncHandler(async (req, res) => {
+  try {
+    const newCommentCount = await Comment.countDocuments({ isNew: true });
+    
+    const newReplyCount = await Comment.aggregate([
+      { $unwind: '$replies' },
+      { $match: { 'replies.isNew': true } },
+      { $count: 'newReplyCount' }
+    ]);
+
+    const totalNewCount = newCommentCount + (newReplyCount[0]?.newReplyCount || 0);
+
+    res.json({ newCommentCount, newReplyCount: newReplyCount[0]?.newReplyCount || 0, totalNewCount });
+  } catch (error) {
+    console.error('Error getting new comment count:', error);
+    res.status(500).json({ message: 'Failed to get new comment count', error: error.message });
+  }
+});
+
 module.exports = {
   getWorkerComments,
   getMyComments,
@@ -289,5 +308,6 @@ module.exports = {
   markAdminRepliesAsRead,
   getUnreadAdminReplies,
   markCommentAsRead,
-  cleanupComments
+  cleanupComments,
+  getNewCommentCount
 };
