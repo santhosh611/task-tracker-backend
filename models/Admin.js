@@ -9,7 +9,7 @@ const adminSchema = mongoose.Schema(
       required: [true, 'Please add a username'],
       unique: true,
     },
-    subdomain: {
+    subdomain: {  // subdomain is an unique key of a company
       type: String,
       required: [true, 'Please add a subdomain'],
       unique: true

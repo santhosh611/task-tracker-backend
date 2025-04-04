@@ -20,6 +20,7 @@ const createWorker = asyncHandler(async (req, res) => {
       : '';
     const username = req.body.username ? req.body.username.trim() : '';
     const password = req.body.password ? req.body.password.trim() : '';
+    const subdomain = req.body.subdomain ? req.body.subdomain.trim() : '';
     const department = req.body.department;
     const photo = req.file ? req.file.filename : '';
  
@@ -32,6 +33,11 @@ const createWorker = asyncHandler(async (req, res) => {
     if (!username) {
       res.status(400);
       throw new Error('Username is required and cannot be empty');
+    }
+
+    if (!subdomain) {
+      res.status(400);
+      throw new Error('Subdomain was missing, check the url');
     }
  
     if (!password) {
@@ -66,6 +72,7 @@ const createWorker = asyncHandler(async (req, res) => {
     const worker = await Worker.create({
       name,
       username,
+      subdomain,
       password: hashedPassword,
       department: departmentDoc._id,
       photo: photo || '',
@@ -76,6 +83,7 @@ const createWorker = asyncHandler(async (req, res) => {
       _id: worker._id,
       name: worker.name,
       username: worker.username,
+      subdomain: worker.subdomain,
       department: departmentDoc.name,
       photo: worker.photo
     });
