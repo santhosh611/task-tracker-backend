@@ -122,14 +122,15 @@ const getWorkers = asyncHandler(async (req, res) => {
 });
 const getPublicWorkers = asyncHandler(async (req, res) => {
   try {
-    const workers = await Worker.find()
-      .select('name username department photo')
+    const workers = await Worker.find({ subdomain: req.body.subdomain })
+      .select('name username subdomain department photo')
       .populate('department', 'name');
     
     const transformedWorkers = workers.map(worker => ({
       _id: worker._id,
       name: worker.name,
       username: worker.username,
+      subdomain: worker.subdomain,
       department: worker.department ? worker.department.name : 'Unassigned',
       photo: worker.photo
     }));

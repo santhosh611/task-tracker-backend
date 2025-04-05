@@ -18,7 +18,7 @@ router.route('/')
   .get(protect, getWorkers)
   .post(protect, adminOnly, upload.single('photo'), createWorker); // Remove adminOnly for now
 
-  router.get('/public', getPublicWorkers);
+router.post('/public', getPublicWorkers);
   
 router.route('/:id')
   .get(protect, getWorkerById)
