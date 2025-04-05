@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const fs = require('fs');
 const connectDB = require('./config/db');
 const { errorHandler } = require('./middleware/errorMiddleware');
 
@@ -24,8 +25,8 @@ const app = express();
 
 // Configure CORS to allow requests from your client with credentials
 app.use(cors({
-  origin: ['http://localhost:3000', 'https://client-seven-ruby.vercel.app','https://client-santhoshsekar999-gmailcoms-projects.vercel.app/'],
-  
+  origin: ['http://localhost:3000', 'https://client-seven-ruby.vercel.app','http://localhost:5173','https://client-santhoshsekar999-gmailcoms-projects.vercel.app/'],
+
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization','Cache-Control']
@@ -35,7 +36,17 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Serve static files from uploads directory
+
+// Determine uploads directory based on environment
+const uploadsDir = process.env.NODE_ENV === 'production' 
+  ? path.join(process.cwd(), 'uploads')  // A relative path for production
+  : path.join(__dirname, 'uploads');     // Development path
+
+// Create directory if it doesn't exist
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Mount routes
@@ -61,3 +72,23 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+app.get('/test-cloudinary', async (req, res) => {
+  const cloudinary = require('./config/cloudinary');
+  
+  console.log('ENV Variables Check:');
+  console.log('CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME);
+  console.log('API_KEY:', process.env.CLOUDINARY_API_KEY ? 'Is set' : 'Not set');
+  console.log('API_SECRET:', process.env.CLOUDINARY_API_SECRET ? 'Is set' : 'Not set');
+  
+  try {
+    // Rest of the code...
+  } catch (error) {
+    console.error('Cloudinary test failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Cloudinary test failed',
+      error: error.message
+    });
+  }
+});

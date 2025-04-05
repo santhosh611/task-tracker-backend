@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const Leave = require('../models/Leave');
+const cloudinary = require('../config/cloudinary');
 
 // @desc    Get all leave applications
 // @route   GET /api/leaves
@@ -26,6 +27,8 @@ const getMyLeaves = asyncHandler(async (req, res) => {
 // @route   POST /api/leaves
 // @access  Private
 const createLeave = asyncHandler(async (req, res) => {
+  console.log('Creating leave request with document');
+  
   const { leaveType, startDate, endDate, totalDays, reason, document } = req.body;
   
   if (!leaveType || !startDate || !endDate || !totalDays || !reason) {
@@ -33,19 +36,47 @@ const createLeave = asyncHandler(async (req, res) => {
     throw new Error('Please fill in all required fields');
   }
   
-  const leave = await Leave.create({
-    worker: req.user._id,
-    leaveType,
-    startDate,
-    endDate,
-    totalDays,
-    reason,
-    document,
-    status: 'Pending',
-    workerViewed: false
-  });
+  let documentUrl = null;
   
-  res.status(201).json(leave);
+  // Upload base64 image to Cloudinary if present
+  if (document && document.startsWith('data:image')) {
+    console.log('Document is a base64 image, attempting Cloudinary upload');
+    try {
+      const uploadResponse = await cloudinary.uploader.upload(document, {
+        folder: 'task-tracker/documents',
+      });
+      documentUrl = uploadResponse.secure_url;
+      console.log('Cloudinary upload successful:', documentUrl);
+    } catch (error) {
+      console.error('Cloudinary upload error details:', error);
+      res.status(500);
+      throw new Error(`Image upload failed: ${error.message}`);
+    }
+  } else if (document) {
+    console.log('Document provided but not a base64 image');
+  }
+  
+  try {
+    console.log('Creating leave record in database');
+    const leave = await Leave.create({
+      worker: req.user._id,
+      leaveType,
+      startDate,
+      endDate,
+      totalDays,
+      reason,
+      document: documentUrl,
+      status: 'Pending',
+      workerViewed: false
+    });
+    
+    console.log('Leave record created successfully:', leave._id);
+    res.status(201).json(leave);
+  } catch (dbError) {
+    console.error('Database error while creating leave:', dbError);
+    res.status(500);
+    throw new Error(`Database error: ${dbError.message}`);
+  }
 });
 
 // @desc    Update leave status (admin only)
@@ -78,18 +109,34 @@ const updateLeaveStatus = asyncHandler(async (req, res) => {
 // In leaveController.js
 const getLeavesByStatus = asyncHandler(async (req, res) => {
   const { status } = req.query;
-
-  const query = status !== 'all' ? { status } : {};
-
+  const query = status && status !== 'all' ? { status } : {};
+  
   const leaves = await Leave.find(query)
     .populate({
       path: 'worker',
-      select: 'name department', 
-      options: { strictPopulate: false } // Allow null values
+      select: 'name department',
+      populate: {
+        path: 'department',
+        select: 'name'
+      }
     })
+    .lean() // Convert to plain JavaScript object
     .sort({ createdAt: -1 });
 
-  res.json(leaves);
+  // Transform the data to ensure clean rendering
+  const processedLeaves = leaves.map(leave => ({
+    ...leave,
+    worker: {
+      ...leave.worker,
+      department: leave.worker?.department 
+        ? (typeof leave.worker.department === 'object' 
+          ? leave.worker.department.name 
+          : leave.worker.department)
+        : 'No Department'
+    }
+  }));
+
+  res.json(processedLeaves);
 });
 // @desc    Mark leave as viewed by worker
 // @route   PUT /api/leaves/:id/viewed

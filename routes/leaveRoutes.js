@@ -1,6 +1,7 @@
 const express = require('express');
 const { getLeavesByStatus } = require('../controllers/leaveController');
 const router = express.Router();
+
 const { 
   getLeaves, 
   getMyLeaves, 

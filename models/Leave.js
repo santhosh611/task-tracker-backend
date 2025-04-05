@@ -37,7 +37,7 @@ const leaveSchema = mongoose.Schema({
     default: false
   },
   document: {
-    type: String
+    type: String  // This will store the Cloudinary URL
   }
 }, {
   timestamps: true
