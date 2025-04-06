@@ -8,17 +8,14 @@ const attendanceSchema = mongoose.Schema({
     username: {
         type: String,
         required: [true, 'Please add a username'],
-        unique: true
     },
     rfid: {
         type: String,
         required: [true, 'RFID is missing'],
-        unique: true
     },
     email: {
         type: String,
         required: [true, 'Please add an email'],
-        unique: true,
         match: [/.+@.+\..+/, 'Please add a valid email']
     },
     subdomain: {
@@ -47,12 +44,12 @@ const attendanceSchema = mongoose.Schema({
     presence: {
         type: Boolean,
         required: [true, 'Presence is required'] // true for in, false for out
-    },
-    worker: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Worker',
-        required: [true, 'Worker is required']
     }
+    // worker: {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: 'Worker',
+    //     required: [true, 'Worker is required']
+    // }
 }, {
     timestamps: true
 });
