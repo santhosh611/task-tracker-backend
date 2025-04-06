@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.put('/', protect, putAttendance);
 router.post('/', protect, getAttendance);
-router.get('/worker', getWorkerAttendance);
+router.post('/worker', getWorkerAttendance);
 
 module.exports = router;

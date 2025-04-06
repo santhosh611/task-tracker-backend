@@ -134,7 +134,7 @@ const createWorker = asyncHandler(async (req, res) => {
       subject: `Welcome to ${subdomain}!`,
       html: `
       <h1>Welcome to ${subdomain}, ${name}!</h1>
-      <p>We are excited to have you on board. Below is your unique RFID QR code:</p>
+      <p>We are excited to have you on board. Your unique RFID QR code: <b>${rfid}</b></p>
       <p>Please keep this QR code safe as it will be used for identification purposes.</p>
       <p>Best regards,<br/>The ${subdomain} Team</p>
       `,

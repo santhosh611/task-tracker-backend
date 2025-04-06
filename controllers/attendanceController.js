@@ -1,5 +1,6 @@
 const Attendance = require('../models/Attendance');
 const Worker = require('../models/Worker');
+const Department = require('../models/Department');
 
 // @desc    Update or create attendance record for a worker
 // @route   PUT /api/attendance
@@ -23,6 +24,13 @@ const putAttendance = async (req, res) => {
         if (!worker) {
             res.status(404);
             throw new Error('Worker not found');
+        }
+
+        // Fetch the department name using the worker.department ObjectId
+        const department = await Department.findById(worker.department);
+        if (!department) {
+            res.status(404);
+            throw new Error('Department not found');
         }
 
         // Get the current date and time in 'Asia/Kolkata' timezone
@@ -52,7 +60,8 @@ const putAttendance = async (req, res) => {
             rfid,
             email: worker.email,
             subdomain,
-            department: worker.department,
+            department: department._id,
+            departmentName: department.name,
             photo: worker.photo,
             date: currentDate,
             time: currentTime,
