@@ -11,6 +11,17 @@ const workerSchema = mongoose.Schema({
     required: [true, 'Please add a username'],
     unique: true
   },
+  rfid: {
+    type: String,
+    required: [true, 'RFID is missing'],
+    unique: true
+  },
+  email: {
+    type: String,
+    required: [true, 'Please add an email'],
+    unique: true,
+    match: [/.+@.+\..+/, 'Please add a valid email']
+  },
   subdomain: {  // subdomain is an unique key of a company for handling the workers
     type: String,
     required: [true, 'Subdomain is missing'],

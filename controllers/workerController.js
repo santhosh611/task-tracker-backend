@@ -5,15 +5,39 @@ const Department = require('../models/Department');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
+const nodemailer = require('nodemailer');
+const QRCode = require('qrcode');
+
+// Generate an unique RFID
+const generateUniqueRFID = async () => {
+  const generateRFID = () => {
+    const letters = String.fromCharCode(
+      65 + Math.floor(Math.random() * 26),
+      65 + Math.floor(Math.random() * 26)
+    );
+    const numbers = Math.floor(1000 + Math.random() * 9000).toString();
+    return `${letters}${numbers}`;
+  };
+
+  let rfid;
+  let isUnique = false;
+
+  while (!isUnique) {
+    rfid = generateRFID();
+    const existingWorker = await Worker.findOne({ rfid });
+    if (!existingWorker) {
+      isUnique = true;
+    }
+  }
+
+  return rfid;
+};
 
 // @desc    Create new worker
 // @route   POST /api/workers
 // @access  Private/Admin
 const createWorker = asyncHandler(async (req, res) => {
   try {
-    console.log('Full Request Body:', req.body);
-    console.log('Request File:', req.file);
- 
     // Trim and validate name with extra checks
     const name = req.body.name && typeof req.body.name === 'string' 
       ? req.body.name.trim() 
@@ -21,8 +45,11 @@ const createWorker = asyncHandler(async (req, res) => {
     const username = req.body.username ? req.body.username.trim() : '';
     const password = req.body.password ? req.body.password.trim() : '';
     const subdomain = req.body.subdomain ? req.body.subdomain.trim() : '';
+    const email = req.body.email ? req.body.email.trim() : '';
     const department = req.body.department;
     const photo = req.file ? req.file.filename : '';
+
+    const rfid = await generateUniqueRFID();
  
     // Comprehensive server-side validation
     if (!name || name.length === 0) {
@@ -49,6 +76,13 @@ const createWorker = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error('Department is required');
     }
+
+    // Check if worker exists
+    const emailExists = await Worker.findOne({ email });
+    if (emailExists) {
+      res.status(400);
+      throw new Error('Worker with this email already exists');
+    }
  
     // Check if worker exists
     const workerExists = await Worker.findOne({ username });
@@ -72,17 +106,57 @@ const createWorker = asyncHandler(async (req, res) => {
     const worker = await Worker.create({
       name,
       username,
+      rfid,
+      email,
       subdomain,
       password: hashedPassword,
       department: departmentDoc._id,
       photo: photo || '',
       totalPoints: 0
     });
+
+    // Generate QR code for the RFID
+    const qrCodeDataUrl = await QRCode.toDataURL(rfid);
+
+    // Configure the email transporter
+    const transporter = nodemailer.createTransport({
+      service: 'gmail', // Use your email service provider
+      auth: {
+        user: process.env.EMAIL_USER, // Your email address
+        pass: process.env.EMAIL_PASS, // Your email password or app-specific password
+      },
+    });
+
+    // Email content
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: `Welcome to ${subdomain}!`,
+      html: `
+      <h1>Welcome to ${subdomain}, ${name}!</h1>
+      <p>We are excited to have you on board. Below is your unique RFID QR code:</p>
+      <p>Please keep this QR code safe as it will be used for identification purposes.</p>
+      <p>Best regards,<br/>The ${subdomain} Team</p>
+      `,
+      attachments: [
+      {
+        filename: 'qr-code.png',
+        content: qrCodeDataUrl.split('base64,')[1],
+        encoding: 'base64',
+        cid: 'qrCodeImage', // Content ID for inline image
+      },
+      ],
+    };
+
+    // Send the email
+    await transporter.sendMail(mailOptions);
  
     res.status(201).json({
       _id: worker._id,
       name: worker.name,
       username: worker.username,
+      rfid: worker.rfid,
+      email: worker.email,
       subdomain: worker.subdomain,
       department: departmentDoc.name,
       photo: worker.photo
