@@ -8,6 +8,10 @@ const departmentSchema = new mongoose.Schema({
     trim: true,
     
   },
+  subdomain: {
+    type: String,
+    required: [true, 'Subdomain is missing'],
+  },
   createdAt: {
     type: Date,
     default: Date.now

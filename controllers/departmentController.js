@@ -3,9 +3,7 @@ const Worker = require('../models/Worker');
 const asyncHandler = require('express-async-handler');
 
 const createDepartment = asyncHandler(async (req, res) => {
-  const { name } = req.body;
-
-  console.log('Received Department Name:', name);
+  const { name, subdomain } = req.body;
 
   // Validate input
   if (!name || name.trim().length < 2) {
@@ -13,19 +11,22 @@ const createDepartment = asyncHandler(async (req, res) => {
     throw new Error('Department name must be at least 2 characters long');
   }
 
+  console.log("subdomain server", subdomain);
+
+  if (!subdomain || subdomain == 'main') {
+    res.status(400);
+    throw new Error('Subdomain is missing, check the URL from server.');
+  }
+
   try {
     // Create department with exact case preservation
-    const department = new Department({ name: name });
-    
-    console.log('Department Before Save:', department);
+    const department = new Department({ name, subdomain });
     
     await department.save();
     
-    console.log('Department After Save:', department);
-
     // Get worker count
     const workerCount = await Worker.countDocuments({ 
-      department: department._id 
+      department: department._id
     });
 
     // Prepare response
@@ -33,8 +34,6 @@ const createDepartment = asyncHandler(async (req, res) => {
       ...department.toObject(),
       workerCount
     };
-
-    console.log('Department Response:', departmentResponse);
 
     res.status(201).json(departmentResponse);
   } catch (error) {
@@ -46,7 +45,7 @@ const createDepartment = asyncHandler(async (req, res) => {
 const getDepartments = asyncHandler(async (req, res) => {
   try {
     // Find departments and sort by creation date (most recent first)
-    const departments = await Department.find().sort({ createdAt: -1 });
+    const departments = await Department.find({ subdomain: req.body.subdomain }).sort({ createdAt: -1 });
 
     // Calculate worker count for each department
     const departmentsWithWorkerCount = await Promise.all(

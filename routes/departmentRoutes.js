@@ -9,9 +9,8 @@ const {
 } = require('../controllers/departmentController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
-router.route('/')
-  .get(protect, getDepartments)
-  .post(protect, adminOnly, createDepartment);
+router.route('/').post(protect, adminOnly, createDepartment);
+router.route('/all').post(protect, getDepartments);
 
 router.route('/:id')
   .put(protect, adminOnly, updateDepartment)
