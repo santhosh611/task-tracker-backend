@@ -25,10 +25,6 @@ const attendanceSchema = mongoose.Schema({
         type: String,
         required: [true, 'Subdomain is missing']
     },
-    password: {
-        type: String,
-        required: [true, 'Please add a password']
-    },
     department: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Department',

@@ -1,4 +1,5 @@
-const Attendance = require('../models/attendanceModel');
+const Attendance = require('../models/Attendance');
+const Worker = require('../models/Worker');
 
 // @desc    Update or create attendance record for a worker
 // @route   PUT /api/attendance
@@ -7,40 +8,62 @@ const putAttendance = async (req, res) => {
     try {
         const { rfid, subdomain } = req.body;
 
-        if (!subdomain || subdomain == 'main') {
+        if (!subdomain || subdomain === 'main') {
             res.status(401);
             throw new Error('Subdomain is missing, check');
         }
 
-        if (!rfid || rfid == '') {
+        if (!rfid || rfid === '') {
             res.status(401);
             throw new Error('RFID is required');
         }
 
-        const currentDate = new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' });
-
-        const lastAttendance = await Attendance.findOne({ rfid, subdomain }).sort({ createdAt: -1 });
-
-        if (lastAttendance) {
-            const lastDate = new Date(lastAttendance.date).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' });
-
-            if (lastDate === currentDate) {
-                // If it's the same day, toggle the presence
-                lastAttendance.presence = !lastAttendance.presence;
-                await lastAttendance.save();
-                return res.status(200).json({ message: 'Attendance updated successfully', attendance: lastAttendance });
-            }
+        // Check if the worker exists in the Worker model
+        const worker = await Worker.findOne({ subdomain, rfid });
+        if (!worker) {
+            res.status(404);
+            throw new Error('Worker not found');
         }
 
-        // If it's a new day or no previous record exists, create a new attendance record
-        const newAttendance = await Attendance.create({
-            ...req.body,
-            date: new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }),
-            time: new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata' }),
-            presence: true
+        // Get the current date and time in 'Asia/Kolkata' timezone
+        const indiaTimezone = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Kolkata',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
         });
 
-        res.status(201).json({ message: 'Attendance created successfully', attendance: newAttendance });
+        const currentDate = indiaTimezone.format(new Date());
+        const currentTime = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata' });
+
+        // Check if this is the first attendance for the worker on the current date
+        const allAttendances = await Attendance.find({ rfid, subdomain }).sort({ createdAt: -1 });
+
+        let presence = true;
+        if (allAttendances.length > 0) {
+            const lastAttendance = allAttendances[0];
+            presence = !lastAttendance.presence;
+        }
+
+        // Insert attendance record
+        const newAttendance = await Attendance.create({
+            name: worker.name,
+            username: worker.username,
+            rfid,
+            email: worker.email,
+            subdomain,
+            department: worker.department,
+            photo: worker.photo,
+            date: currentDate,
+            time: currentTime,
+            presence,
+            worker: worker._id
+        });
+
+        res.status(201).json({
+            message: presence ? 'Attendance marked as in' : 'Attendance marked as out',
+            attendance: newAttendance
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error', error: error.message });

@@ -7,6 +7,7 @@ const { errorHandler } = require('./middleware/errorMiddleware');
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
+const attendanceRoutes = require('./routes/attedanceRoutes');
 const workerRoutes = require('./routes/workerRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const taskRoutes = require('./routes/taskRoutes');
@@ -52,6 +53,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Mount routes
 app.use('/api/auth', authRoutes);
+app.use('/api/attendance', attendanceRoutes);
 app.use('/api/workers', workerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/tasks', taskRoutes);
