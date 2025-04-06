@@ -100,7 +100,7 @@ const createWorker = asyncHandler(async (req, res) => {
 // @access  Private/Admin
 const getWorkers = asyncHandler(async (req, res) => {
   try {
-    const workers = await Worker.find()
+    const workers = await Worker.find({subdomain: req.body.subdomain})
       .select('-password')
       .populate('department', 'name');
     
