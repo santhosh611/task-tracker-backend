@@ -44,12 +44,12 @@ const attendanceSchema = mongoose.Schema({
     presence: {
         type: Boolean,
         required: [true, 'Presence is required'] // true for in, false for out
+    },
+    worker: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Worker',
+        required: [true, 'Worker is required']
     }
-    // worker: {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: 'Worker',
-    //     required: [true, 'Worker is required']
-    // }
 }, {
     timestamps: true
 });
