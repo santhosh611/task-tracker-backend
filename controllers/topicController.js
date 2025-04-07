@@ -13,7 +13,7 @@ const getTopics = asyncHandler(async (req, res) => {
 // @route   POST /api/topics
 // @access  Private/Admin
 const createTopic = asyncHandler(async (req, res) => {
-  const { name, points, department } = req.body;
+  const { name, points, department, subdomain } = req.body;
 
   // Check if topic exists
   const topicExists = await Topic.findOne({ name });
@@ -27,7 +27,8 @@ const createTopic = asyncHandler(async (req, res) => {
   const topic = await Topic.create({
     name,
     points,
-    department: department || 'all'
+    department: department || 'all',
+    subdomain
   });
 
   res.status(201).json(topic);

@@ -13,6 +13,10 @@ const topicSchema = mongoose.Schema({
   department: {
     type: String,
     default: 'all'
+  },
+  subdomain: {
+    type: String,
+    required: [true, 'Subdomain is missing']
   }
 }, {
   timestamps: true
