@@ -152,16 +152,23 @@ const checkAdminInitialization = asyncHandler(async (req, res) => {
 // @route   POST /api/auth/worker
 // @access  Public
 const loginWorker = asyncHandler(async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, subdomain } = req.body;
   
-  const worker = await Worker.findOne({ username }).populate('department', 'name');
+  const worker = await Worker.findOne({ username, subdomain }).populate('department', 'name');
+
+  if (!worker) {
+    res.status(401);
+    throw new Error("Worker not found, check your subdomain.");
+  }
   
   if (worker && (await bcrypt.compare(password, worker.password))) {
     res.json({
       _id: worker._id,
       username: worker.username,
-      name: worker.name, // Full name
-      department: worker.department ? worker.department.name : 'Unassigned', // Department name
+      name: worker.name,
+      subdomain: worker.subdomain,
+      rfid: worker.rfid ? worker.rfid : 'unassigned',
+      department: worker.department ? worker.department.name : 'Unassigned',
       role: 'worker',
       token: generateToken(worker._id, 'worker')
     });
