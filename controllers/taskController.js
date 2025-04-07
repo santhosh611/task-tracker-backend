@@ -145,7 +145,7 @@ const resetAllTasks = asyncHandler(async (req, res) => {
 });
 
 const createCustomTask = asyncHandler(async (req, res) => {
-  const { description } = req.body;
+  const { description, subdomain } = req.body;
   const workerId = req.user._id;
 
   console.log('Creating custom task with workerId:', workerId);
@@ -161,6 +161,7 @@ const createCustomTask = asyncHandler(async (req, res) => {
   const task = await Task.create({
     worker: workerId,
     description,
+    subdomain,
     isCustom: true,
     status: 'pending',
     points: 0
@@ -181,7 +182,8 @@ const createCustomTask = asyncHandler(async (req, res) => {
 
 
 const getCustomTasks = asyncHandler(async (req, res) => {
-  const tasks = await Task.find({ isCustom: true })
+  const { subdomain } = req.params;
+  const tasks = await Task.find({ isCustom: true, subdomain })
     .populate({
       path: 'worker',
       select: 'name department',
