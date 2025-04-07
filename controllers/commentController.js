@@ -279,20 +279,34 @@ const cleanupComments = asyncHandler(async (req, res) => {
     res.status(500).json({ message: 'Cleanup failed', error: error.message });
   }
 });
-
 const getNewCommentCount = asyncHandler(async (req, res) => {
   try {
-    const newCommentCount = await Comment.countDocuments({ isNew: true });
-    
+    const newCommentCount = await Comment.countDocuments({ 
+      isNew: true,
+      status: { $ne: 'read' },
+      // Exclude comments with admin replies
+      $or: [
+        { 'replies': { $not: { $elemMatch: { isAdminReply: true } } } },
+        { 'replies': { $size: 0 } }
+      ]
+    });
+
     const newReplyCount = await Comment.aggregate([
       { $unwind: '$replies' },
-      { $match: { 'replies.isNew': true } },
+      { $match: { 
+        'replies.isNew': true,
+        'replies.isAdminReply': { $ne: true } 
+      } },
       { $count: 'newReplyCount' }
     ]);
 
     const totalNewCount = newCommentCount + (newReplyCount[0]?.newReplyCount || 0);
 
-    res.json({ newCommentCount, newReplyCount: newReplyCount[0]?.newReplyCount || 0, totalNewCount });
+    res.json({ 
+      newCommentCount, 
+      newReplyCount: newReplyCount[0]?.newReplyCount || 0, 
+      totalNewCount 
+    });
   } catch (error) {
     console.error('Error getting new comment count:', error);
     res.status(500).json({ message: 'Failed to get new comment count', error: error.message });

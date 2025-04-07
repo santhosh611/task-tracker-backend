@@ -12,6 +12,7 @@ const {
   markCommentAsRead,
   getNewCommentCount,
   cleanupComments,
+  markAllCommentsAsRead
 
 } = require('../controllers/commentController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
@@ -22,6 +23,20 @@ router.route('/')
   .get(protect, adminOnly, getAllComments)
   .post(protect, createComment);
 
+  router.put('/mark-all-read', protect, adminOnly, asyncHandler(async (req, res) => {
+    await Comment.updateMany(
+      { isNew: true },
+      { 
+        isNew: false, 
+        $set: { 
+          'replies.$[].isNew': false 
+        } 
+      }
+    );
+    
+    res.json({ message: 'All comments marked as read' });
+  }));
+  
 router.get('/me', protect, getMyComments);
 router.get('/worker/:workerId', protect, adminOnly, getWorkerComments);
 router.post('/:id/replies', protect, addReply);

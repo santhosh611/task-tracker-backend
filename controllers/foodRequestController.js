@@ -17,10 +17,19 @@ const getTodayRequests = asyncHandler(async (req, res) => {
       $gte: today,
       $lt: tomorrow
     }
-  }).populate('worker', 'name employeeId department');
+  }).populate({
+    path: 'worker',
+    populate: {
+      path: 'department',
+      select: 'name'
+    }
+  });
+  
+  console.log('Requests:', JSON.stringify(requests, null, 2));
   
   res.status(200).json(requests);
 });
+
 
 // Submit a food request (worker)
 const submitFoodRequest = asyncHandler(async (req, res) => {

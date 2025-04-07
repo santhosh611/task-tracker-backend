@@ -45,7 +45,13 @@ const commentSchema = mongoose.Schema({
   hasUnreadAdminReply: {
     type: Boolean,
     default: false
+  },
+  workerViewed: {
+    type: Boolean,
+    default: false
   }
+  
+  
 }, {
   timestamps: true
 });

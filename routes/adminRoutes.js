@@ -7,4 +7,4 @@ router.get('/dashboard', (req, res) => {
   res.json({ message: 'Admin dashboard data' });
 });
 router.get('/admin-only', protect, adminOnly,);
-module.exports = router;
+module.exports = router; 
