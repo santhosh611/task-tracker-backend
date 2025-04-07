@@ -14,9 +14,8 @@ const {
 } = require('../controllers/taskController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
-router.route('/')
-  .post(protect, createTask)
-  .get(protect, adminOnly, getTasks);
+router.route('/').post(protect, createTask)
+router.route('/all').post(protect, adminOnly, getTasks);
 
 router.get('/me', protect, getMyTasks);
 router.get('/range', protect, adminOnly, getTasksByDateRange);

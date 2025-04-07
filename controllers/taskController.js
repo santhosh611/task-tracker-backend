@@ -7,7 +7,7 @@ const Topic = require('../models/Topic');
 // @route   POST /api/tasks
 // @access  Private
 const createTask = asyncHandler(async (req, res) => {
-  const { data, topics } = req.body;
+  const { data, topics, subdomain } = req.body;
   const workerId = req.user._id;
 
   // Validate task data
@@ -29,7 +29,7 @@ const createTask = asyncHandler(async (req, res) => {
   let topicPoints = 0;
   
   if (topics && topics.length > 0) {
-    const topicObjects = await Topic.find({ _id: { $in: topics } });
+    const topicObjects = await Topic.find({ _id: { $in: topics }, subdomain });
     topicIds = topicObjects.map(topic => topic._id);
     
     topicPoints = topicObjects.reduce((sum, topic) => sum + topic.points, 0);
@@ -40,6 +40,7 @@ const createTask = asyncHandler(async (req, res) => {
   const task = await Task.create({
     worker: workerId,
     data,
+    subdomain,
     topics: topicIds,
     points: taskPoints
   });
@@ -61,7 +62,7 @@ const createTask = asyncHandler(async (req, res) => {
 // @route   GET /api/tasks
 // @access  Private/Admin
 const getTasks = asyncHandler(async (req, res) => {
-  const tasks = await Task.find()
+  const tasks = await Task.find({ subdomain: req.body.subdomain })
     .populate({
       path: 'worker',
       populate: {

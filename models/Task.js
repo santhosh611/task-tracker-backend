@@ -6,6 +6,10 @@ const taskSchema = mongoose.Schema({
     required: true,
     ref: 'Worker'
   },
+  subdomain: {
+    type: String,
+    required: [true, 'Subdomain is missing']
+  },
   data: {
     type: Object,
     default: {}
