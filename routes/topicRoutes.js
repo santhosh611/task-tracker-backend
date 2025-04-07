@@ -8,9 +8,8 @@ const {
 } = require('../controllers/topicController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
-router.route('/')
-  .get(protect, getTopics)
-  .post(protect, adminOnly, createTopic);
+router.route('/').post(protect, adminOnly, createTopic);
+router.route('/all').post(protect, getTopics);
 
 router.route('/:id')
   .put(protect, adminOnly, updateTopic)

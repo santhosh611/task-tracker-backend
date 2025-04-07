@@ -5,7 +5,14 @@ const Topic = require('../models/Topic');
 // @route   GET /api/topics
 // @access  Private
 const getTopics = asyncHandler(async (req, res) => {
-  const topics = await Topic.find().sort({ department: 1, name: 1 });
+  const { subdomain } = req.body;
+
+  if(!subdomain || subdomain == 'main') {
+    res.status(401);
+    throw new Error ('Subdomain is missing, check the URL.');
+  }
+
+  const topics = await Topic.find({ subdomain }).sort({ department: 1, name: 1 });
   res.json(topics);
 });
 
