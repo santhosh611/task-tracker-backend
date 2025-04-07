@@ -7,6 +7,10 @@ const settingsSchema = mongoose.Schema(
       type: Boolean,
       default: true
     },
+    subdomain: {
+      type: String,
+      required: [true, 'Subdomain is missing']
+    },
     lastUpdated: {
       type: Date,
       default: Date.now

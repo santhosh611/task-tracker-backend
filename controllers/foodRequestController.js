@@ -25,7 +25,14 @@ const getTodayRequests = asyncHandler(async (req, res) => {
 // Submit a food request (worker)
 const submitFoodRequest = asyncHandler(async (req, res) => {
   // Check if submissions are enabled
-  const settings = await Settings.findOne() || await Settings.create({});
+  const { subdomain } = req.params;
+
+  if (!subdomain || subdomain == 'main') {
+    res.status(400);
+    throw new Error('Subdomain is required');
+  }
+  
+  const settings = await Settings.findOne({ subdomain }) || await Settings.create({ subdomain });
   
   if (!settings.foodRequestEnabled) {
     res.status(400);
@@ -63,20 +70,34 @@ const submitFoodRequest = asyncHandler(async (req, res) => {
 
 // Toggle food request submissions (admin)
 const toggleFoodRequests = asyncHandler(async (req, res) => {
-  const settings = await Settings.findOne() || await Settings.create({});
-  
+  const { subdomain } = req.params;
+
+  if (!subdomain || subdomain == 'main') {
+    res.status(400);
+    throw new Error('Subdomain is required');
+  }
+
+  const settings = await Settings.findOne({ subdomain }) || await Settings.create({ subdomain });
+
   settings.foodRequestEnabled = !settings.foodRequestEnabled;
   settings.lastUpdated = new Date();
   settings.updatedBy = req.user._id;
-  
+
   await settings.save();
-  
+
   res.status(200).json({ enabled: settings.foodRequestEnabled });
 });
 
 // Get current settings status
 const getSettings = asyncHandler(async (req, res) => {
-  const settings = await Settings.findOne() || await Settings.create({});
+  const { subdomain } = req.params;
+
+  if (!subdomain || subdomain == 'main') {
+    res.status(400);
+    throw new Error('Subdomain is required');
+  }
+
+  const settings = await Settings.findOne({ subdomain });
   res.status(200).json({ enabled: settings.foodRequestEnabled });
 });
 

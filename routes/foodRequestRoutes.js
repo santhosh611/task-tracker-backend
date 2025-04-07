@@ -14,8 +14,8 @@ const { adminOnly } = require('../middleware/roleMiddleware');
 router.post('/', protect, submitFoodRequest);
 
 // Admin routes
-router.get('/', protect, adminOnly, getTodayRequests);
-router.put('/toggle', protect, adminOnly, toggleFoodRequests);
-router.get('/settings', protect, getSettings);
+router.get('/:subdomain', protect, adminOnly, getTodayRequests);
+router.put('/toggle/:subdomain', protect, adminOnly, toggleFoodRequests);
+router.get('/settings/:subdomain', protect, getSettings);
 
 module.exports = router;
