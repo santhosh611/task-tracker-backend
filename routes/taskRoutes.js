@@ -19,7 +19,7 @@ router.route('/all').post(protect, adminOnly, getTasks);
 
 router.get('/me', protect, getMyTasks);
 router.get('/range', protect, adminOnly, getTasksByDateRange);
-router.delete('/reset', protect, adminOnly, resetAllTasks);
+router.delete('/reset/:subdomain', protect, adminOnly, resetAllTasks);
 
 // Custom task routes
 router.post('/custom', protect, createCustomTask);

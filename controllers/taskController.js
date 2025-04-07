@@ -115,14 +115,21 @@ const getTasksByDateRange = asyncHandler(async (req, res) => {
 // @route   DELETE /api/tasks/reset
 // @access  Private/Admin
 const resetAllTasks = asyncHandler(async (req, res) => {
-  // Delete all tasks
-  await Task.deleteMany({});
-  
-  // Reset all worker points
-  await Worker.updateMany(
-    {},
-    { 
-      $set: { 
+  const { subdomain } = req.params;
+
+  if (!subdomain || subdomain == 'main') {
+    res.status(400);
+    throw new Error('Please provide a subdomain');
+  }
+
+  // Delete all tasks for the given subdomain
+  const deletedTasks = await Task.deleteMany({ subdomain });
+
+  // Reset all worker points for the given subdomain
+  const updatedWorkers = await Worker.updateMany(
+    { subdomain },
+    {
+      $set: {
         totalPoints: 0,
         topicPoints: 0,
         lastSubmission: {}
@@ -130,7 +137,11 @@ const resetAllTasks = asyncHandler(async (req, res) => {
     }
   );
 
-  res.json({ message: 'All tasks reset successfully' });
+  res.json({
+    message: `All tasks for subdomain '${subdomain}' reset successfully`,
+    deletedTasksCount: deletedTasks.deletedCount,
+    updatedWorkersCount: updatedWorkers.modifiedCount
+  });
 });
 
 const createCustomTask = asyncHandler(async (req, res) => {
