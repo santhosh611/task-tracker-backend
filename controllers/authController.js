@@ -101,10 +101,10 @@ const registerAdmin = asyncHandler(async (req, res) => {
 // @route   POST /api/auth/admin
 // @access  Public
 const loginAdmin = asyncHandler(async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, subdomain } = req.body;
 
   // Find admin and include password field
-  const admin = await Admin.findOne({ username }).select('+password');
+  const admin = await Admin.findOne({ username, subdomain }).select('+password');
 
   if (admin && (await bcrypt.compare(password, admin.password))) {
     res.json({
