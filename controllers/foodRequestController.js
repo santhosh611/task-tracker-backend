@@ -6,6 +6,7 @@ const Worker = require('../models/Worker');
 
 // Get all food requests for current day (admin)
 const getTodayRequests = asyncHandler(async (req, res) => {
+  const { subdomain } = req.params;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
@@ -13,12 +14,12 @@ const getTodayRequests = asyncHandler(async (req, res) => {
   tomorrow.setDate(tomorrow.getDate() + 1);
   
   const requests = await FoodRequest.find({
+    subdomain,
     date: {
       $gte: today,
       $lt: tomorrow
     }
-  }).populate('worker', 'name employeeId department');
-  
+  }).populate('worker', 'name rfid department').populate('department', 'name');
   res.status(200).json(requests);
 });
 
@@ -58,11 +59,19 @@ const submitFoodRequest = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error('You have already submitted a food request today');
   }
-  
+
+  // Get the department of the worker
+  const worker = await Worker.findById(req.user._id);
+  if (!worker) {
+    res.status(404);
+    throw new Error('Worker not found');
+  }
+
   // Create new request
   const request = await FoodRequest.create({
     worker: req.user._id,
     subdomain,
+    department: worker.department,
     date: new Date()
   });
   

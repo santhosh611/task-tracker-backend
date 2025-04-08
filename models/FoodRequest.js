@@ -12,6 +12,11 @@ const foodRequestSchema = mongoose.Schema(
       type: String,
       required: [true, 'Subdomain is missing']
     },
+    department: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Department',
+      required: [true, 'Department not found']
+    },
     date: {
       type: Date,
       default: Date.now
