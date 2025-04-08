@@ -5,7 +5,8 @@ const Column = require('../models/Column');
 // @route   GET /api/columns
 // @access  Private
 const getColumns = asyncHandler(async (req, res) => {
-  const columns = await Column.find().sort({ department: 1, name: 1 });
+  const { subdomain } = req.params;
+  const columns = await Column.find({ subdomain }).sort({ department: 1, name: 1 });
   res.json(columns);
 });
 
@@ -13,10 +14,10 @@ const getColumns = asyncHandler(async (req, res) => {
 // @route   POST /api/columns
 // @access  Private/Admin
 const createColumn = asyncHandler(async (req, res) => {
-  const { name, department } = req.body;
+  const { name, department, subdomain } = req.body;
 
   // Check if column exists
-  const columnExists = await Column.findOne({ name });
+  const columnExists = await Column.findOne({ name, subdomain });
 
   if (columnExists) {
     res.status(400);
@@ -26,6 +27,7 @@ const createColumn = asyncHandler(async (req, res) => {
   // Create column
   const column = await Column.create({
     name,
+    subdomain,
     department: department || 'all'
   });
 

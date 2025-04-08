@@ -8,9 +8,8 @@ const {
 } = require('../controllers/columnController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
-router.route('/')
-  .get(protect, getColumns)
-  .post(protect, adminOnly, createColumn);
+router.route('/').post(protect, adminOnly, createColumn);
+router.route('/:subdomain').get(protect, getColumns)
 
 router.route('/:id')
   .put(protect, adminOnly, updateColumn)
