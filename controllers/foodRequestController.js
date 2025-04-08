@@ -25,7 +25,7 @@ const getTodayRequests = asyncHandler(async (req, res) => {
 // Submit a food request (worker)
 const submitFoodRequest = asyncHandler(async (req, res) => {
   // Check if submissions are enabled
-  const { subdomain } = req.params;
+  const { subdomain } = req.body;
 
   if (!subdomain || subdomain == 'main') {
     res.status(400);
@@ -62,6 +62,7 @@ const submitFoodRequest = asyncHandler(async (req, res) => {
   // Create new request
   const request = await FoodRequest.create({
     worker: req.user._id,
+    subdomain,
     date: new Date()
   });
   

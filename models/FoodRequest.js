@@ -8,6 +8,10 @@ const foodRequestSchema = mongoose.Schema(
       ref: 'Worker',
       required: true
     },
+    subdomain: {
+      type: String,
+      required: [true, 'Subdomain is missing']
+    },
     date: {
       type: Date,
       default: Date.now
