@@ -6,6 +6,10 @@ const leaveSchema = mongoose.Schema({
     required: true,
     ref: 'Worker'
   },
+  subdomain: {
+    type: String,
+    required: [true, 'Subdomain is missing']
+  },
   leaveType: {
     type: String,
     required: [true, 'Please add leave type'],

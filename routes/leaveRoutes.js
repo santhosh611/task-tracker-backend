@@ -1,23 +1,22 @@
 const express = require('express');
 const { getLeavesByStatus } = require('../controllers/leaveController');
 const router = express.Router();
-const { 
-  getLeaves, 
-  getMyLeaves, 
-  createLeave, 
-  updateLeaveStatus, 
+const {
+  getLeaves,
+  getMyLeaves,
+  createLeave,
+  updateLeaveStatus,
   markLeaveAsViewed,
-  markLeavesAsViewedByAdmin, 
-  getLeavesByDateRange 
+  markLeavesAsViewedByAdmin,
+  getLeavesByDateRange
 } = require('../controllers/leaveController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
+const multer = require('multer'); 
+const upload = multer({ dest: 'uploads/' });
 
 router.route('/')
   .get(protect, adminOnly, getLeaves)
-  .post(protect, createLeave);
-
-  // leaveRoutes.js
-
+  .post(protect, upload.single('document'), createLeave); 
 
 router.get('/me', protect, getMyLeaves);
 router.get('/range', protect, adminOnly, getLeavesByDateRange);

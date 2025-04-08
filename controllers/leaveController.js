@@ -26,25 +26,36 @@ const getMyLeaves = asyncHandler(async (req, res) => {
 // @route   POST /api/leaves
 // @access  Private
 const createLeave = asyncHandler(async (req, res) => {
-  const { leaveType, startDate, endDate, totalDays, reason, document } = req.body;
-  
+  const { subdomain, leaveType, startDate, endDate, totalDays, reason } = req.body;
+
+  console.log('REQ BODY:', req.body);
+  console.log('REQ FILE:', req.file);
+
+  if (!subdomain || subdomain === 'main') {
+    res.status(400);
+    throw new Error('Subdomain is missing, check the URL.');
+  }
+
   if (!leaveType || !startDate || !endDate || !totalDays || !reason) {
     res.status(400);
     throw new Error('Please fill in all required fields');
   }
-  
+
+  const documentDoc = req.file ? req.file.filename : '';
+
   const leave = await Leave.create({
     worker: req.user._id,
+    subdomain,
     leaveType,
     startDate,
     endDate,
     totalDays,
     reason,
-    document,
+    document: documentDoc,
     status: 'Pending',
     workerViewed: false
   });
-  
+
   res.status(201).json(leave);
 });
 
