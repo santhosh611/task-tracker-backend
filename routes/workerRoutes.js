@@ -12,10 +12,10 @@ const {
   resetWorkerActivities,
   getPublicWorkers
 } = require('../controllers/workerController');
-const { protect, adminOnly } = require('../middleware/authMiddleware');
+const { protect, adminOnly, adminOrWorker } = require('../middleware/authMiddleware');
 
 router.route('/').post(protect, adminOnly, upload.single('photo'), createWorker); // Remove adminOnly for now
-router.route('/all').post(protect, adminOnly, getWorkers);
+router.route('/all').post(protect, adminOrWorker, getWorkers);
 
 router.post('/public', getPublicWorkers);
   
