@@ -14,9 +14,8 @@ const { protect, adminOnly } = require('../middleware/authMiddleware');
 const multer = require('multer'); 
 const upload = multer({ dest: 'uploads/' });
 
-router.route('/')
-  .get(protect, adminOnly, getLeaves)
-  .post(protect, upload.single('document'), createLeave); 
+router.route('/').post(protect, upload.single('document'), createLeave); 
+router.route('/:subdomain').get(protect, adminOnly, getLeaves)
 
 router.get('/me', protect, getMyLeaves);
 router.get('/range', protect, adminOnly, getLeavesByDateRange);

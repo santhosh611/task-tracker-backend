@@ -5,7 +5,13 @@ const Leave = require('../models/Leave');
 // @route   GET /api/leaves
 // @access  Private/Admin
 const getLeaves = asyncHandler(async (req, res) => {
-  const leaves = await Leave.find()
+  const { subdomain } = req.params;
+
+  if (!subdomain || subdomain == 'main') {
+    res.status(400);
+    throw new Error("Subdomain is missing check the URL.");
+  }
+  const leaves = await Leave.find({ subdomain })
     .populate('worker', 'name department')
     .sort({ createdAt: -1 });
 
