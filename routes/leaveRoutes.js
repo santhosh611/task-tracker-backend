@@ -10,14 +10,14 @@ const {
   markLeavesAsViewedByAdmin,
   getLeavesByDateRange
 } = require('../controllers/leaveController');
-const { protect, adminOnly } = require('../middleware/authMiddleware');
+const { protect, adminOnly, adminOrWorker, workerOnly } = require('../middleware/authMiddleware');
 const multer = require('multer'); 
 const upload = multer({ dest: 'uploads/' });
 
 router.route('/').post(protect, upload.single('document'), createLeave); 
-router.route('/:subdomain').get(protect, adminOnly, getLeaves)
+router.route('/:subdomain/:me').get(protect, adminOrWorker, getLeaves)
 
-router.get('/me', protect, getMyLeaves);
+router.get('/me', protect, workerOnly, getMyLeaves);
 router.get('/range', protect, adminOnly, getLeavesByDateRange);
 router.get('/status', protect, adminOnly, getLeavesByStatus);
 router.put('/:id/status', protect, adminOnly, updateLeaveStatus);

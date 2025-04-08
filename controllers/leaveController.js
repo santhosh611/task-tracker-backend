@@ -5,15 +5,32 @@ const Leave = require('../models/Leave');
 // @route   GET /api/leaves
 // @access  Private/Admin
 const getLeaves = asyncHandler(async (req, res) => {
-  const { subdomain } = req.params;
+  const { subdomain, me } = req.params;
+
+  if (!(me == '1' || me == '0')) {
+    throw new Error ('URL not found');
+  }
 
   if (!subdomain || subdomain == 'main') {
     res.status(400);
     throw new Error("Subdomain is missing check the URL.");
   }
-  const leaves = await Leave.find({ subdomain })
-    .populate('worker', 'name department')
+
+  let leaves;
+  
+  if (me == '1') {
+    leaves = await Leave.find({ worker: req.user._id })
     .sort({ createdAt: -1 });
+  } else if (me == '0') {
+    let user = await Admin.findById(decoded.id).select('-password');
+    if (user) {
+      leaves = await Leave.find({ subdomain })
+      .populate('worker', 'name department')
+      .sort({ createdAt: -1 });
+    } else {
+      res.status(400).json({"message": "access denied"});
+    }
+  }
 
   res.json(leaves);
 });
@@ -22,6 +39,7 @@ const getLeaves = asyncHandler(async (req, res) => {
 // @route   GET /api/leaves/me
 // @access  Private
 const getMyLeaves = asyncHandler(async (req, res) => {
+  console.log(req.user._id);
   const leaves = await Leave.find({ worker: req.user._id })
     .sort({ createdAt: -1 });
   

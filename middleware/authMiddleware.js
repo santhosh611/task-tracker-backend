@@ -5,7 +5,7 @@ const Admin = require('../models/Admin');
 
 const protect = asyncHandler(async (req, res, next) => {
   let token;
-  
+
   if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer')) {
     return res.status(401).json({ message: 'Not authorized, no token' });
   }
@@ -13,23 +13,26 @@ const protect = asyncHandler(async (req, res, next) => {
   try {
     token = req.headers.authorization.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Try to find the user in Admin collection first
     let user = await Admin.findById(decoded.id).select('-password');
-    
-    if (!user) {
+    if (user) {
+      req.user = user;
+      req.user.role = 'admin';
+    } else {
+      // Then try Worker collection
       user = await Worker.findById(decoded.id).select('-password');
-    }
-    
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
+      if (!user) {
+        return res.status(401).json({ message: 'User not found' });
+      }
+      req.user = user;
+      req.user.role = 'worker';
     }
 
-    req.user = user;
-    req.user.role = user.role || (user instanceof Admin ? 'admin' : 'worker');
-    
     next();
   } catch (error) {
     console.error('Token verification error:', error);
-    return res.status(401).json({ message: 'Not authorized, token failed', error: error.message }); 
+    return res.status(401).json({ message: 'Not authorized, token failed', error: error.message });
   }
 });
 
@@ -47,12 +50,8 @@ const roleCheck = (roles) => {
   };
 };
 
-
-
-
-
-const adminOnly = roleCheck(['admin']);
 const workerOnly = roleCheck(['worker']);
+const adminOnly = roleCheck(['admin']);
 const adminOrWorker = roleCheck(['admin', 'worker']);
 
 module.exports = { protect, adminOnly, workerOnly, adminOrWorker };
