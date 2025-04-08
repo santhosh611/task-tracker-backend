@@ -10,7 +10,7 @@ const {
   getUnreadAdminReplies,
   markCommentAsRead 
 } = require('../controllers/commentController');
-const { protect, adminOnly } = require('../middleware/authMiddleware');
+const { protect, adminOnly, adminOrWorker } = require('../middleware/authMiddleware');
 
 router.route('/').post(protect, createComment);
 router.route('/:subdomain').get(protect, adminOnly, getAllComments)
