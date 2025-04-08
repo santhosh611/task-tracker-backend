@@ -7,12 +7,17 @@ const Worker = require('../models/Worker');
 // Get all food requests for current day (admin)
 const getTodayRequests = asyncHandler(async (req, res) => {
   const { subdomain } = req.params;
+
+  if (!subdomain || subdomain == 'main') {
+    res.status(400);
+    throw new Error('Subdomain is required');
+  }
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  
+
   const requests = await FoodRequest.find({
     subdomain,
     date: {
@@ -32,21 +37,21 @@ const submitFoodRequest = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error('Subdomain is required');
   }
-  
+
   const settings = await Settings.findOne({ subdomain }) || await Settings.create({ subdomain });
-  
+
   if (!settings.foodRequestEnabled) {
     res.status(400);
     throw new Error('Food requests are currently disabled');
   }
-  
+
   // Check if worker has already submitted a request today
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  
+
   const existingRequest = await FoodRequest.findOne({
     worker: req.user._id,
     date: {
@@ -54,7 +59,7 @@ const submitFoodRequest = asyncHandler(async (req, res) => {
       $lt: tomorrow
     }
   });
-  
+
   if (existingRequest) {
     res.status(400);
     throw new Error('You have already submitted a food request today');
@@ -74,7 +79,7 @@ const submitFoodRequest = asyncHandler(async (req, res) => {
     department: worker.department,
     date: new Date()
   });
-  
+
   res.status(201).json(request);
 });
 

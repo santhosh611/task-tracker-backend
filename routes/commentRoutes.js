@@ -12,9 +12,8 @@ const {
 } = require('../controllers/commentController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
-router.route('/')
-  .get(protect, adminOnly, getAllComments)
-  .post(protect, createComment);
+router.route('/').post(protect, createComment);
+router.route('/:subdomain').get(protect, adminOnly, getAllComments)
 
 router.get('/me', protect, getMyComments);
 router.get('/worker/:workerId', protect, adminOnly, getWorkerComments);

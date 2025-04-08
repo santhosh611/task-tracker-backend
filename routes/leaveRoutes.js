@@ -15,7 +15,7 @@ const multer = require('multer');
 const upload = multer({ dest: 'uploads/' });
 
 router.route('/').post(protect, upload.single('document'), createLeave); 
-router.route('/:subdomain/:me').get(protect, adminOrWorker, getLeaves)
+router.route('/:subdomain/:me').get(protect, getLeaves)
 
 router.get('/me', protect, workerOnly, getMyLeaves);
 router.get('/range', protect, adminOnly, getLeavesByDateRange);

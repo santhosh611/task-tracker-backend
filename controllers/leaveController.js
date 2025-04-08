@@ -1,5 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const Leave = require('../models/Leave');
+const Admin = require('../models/Admin');
 
 // @desc    Get all leave applications
 // @route   GET /api/leaves
@@ -22,7 +23,7 @@ const getLeaves = asyncHandler(async (req, res) => {
     leaves = await Leave.find({ worker: req.user._id })
     .sort({ createdAt: -1 });
   } else if (me == '0') {
-    let user = await Admin.findById(decoded.id).select('-password');
+    let user = await Admin.findById(req.user._id).select('-password');
     if (user) {
       leaves = await Leave.find({ subdomain })
       .populate('worker', 'name department')

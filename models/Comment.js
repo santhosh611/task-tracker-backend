@@ -12,6 +12,10 @@ const replySchema = mongoose.Schema({
   isNew: {
     type: Boolean,
     default: true
+  },
+  subdomain: {
+    type: String,
+    required: [true, 'Subdomain is missing']
   }
 }, {
   timestamps: true
@@ -22,6 +26,10 @@ const commentSchema = mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: 'Worker'
+  },
+  subdomain: {
+    type: String,
+    required: [true, 'Subdomain is missing']
   },
   text: {
     type: String,
